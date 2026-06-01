@@ -1,77 +1,318 @@
-###Title
-Designing Solutions for NEA (OCR H446 NEA Component 3)
-###Do Now
-Yes/No: Data structures should be defined before coding begins.
-MCQ: Which design tool shows the flow of processes?
-a) Storyboard
-b) Trace Table
-c) Flowchart
-d) Screenshot
-Short answer: State one benefit of creating a design before implementation.
-Challenge: What does modularity mean?
-###Do Now Review
-Q1: Define data structures first? Answer: Yes
-Q2: Correct answer: Flowchart
-Q3: Benefit: Reduces errors and provides clarity
-Q4: Modularity = breaking system into independent modules
-Misconception: Design is not optional; it guides development and testing.
-###Key Terms
-Modular Design: Breaking solutions into maintainable sub-programs
-Pseudo-code: Structured approach to describe algorithm steps
-Flowchart: Diagram to illustrate control flow
-Data Dictionary: Table of variables and data types
-User Interface (UI): Visual design for user interaction
-###Presentation
-✔ Importance of design in NEA – ensures clarity and structure
-✔ Common components of a design document:
-- Modular structure (top-down design)
-- Pseudo-code or flowcharts
-- Data dictionary and file structures
-- UI wireframes
-✔ Criteria from OCR NEA marking for design section
-###Objectives
-Explain what should be in a design section of NEA
-Produce pseudo-code and supporting diagrams for a chosen problem
-Justify design choices (data structures, modular approach)
-###I Do
-Model:
-Problem: Build a quiz system
-Demonstrate:
-- Decompose tasks: Load questions, get input, check answer
-- Pseudo-code for main routine
-- Data dictionary sample:
+const TILE_SIZE = 64;
 
-Variable Type Purpose score INT Stores user score username STRING Stores player name
-Explain modularity benefits for testing and maintainability
-###We Do
-Together:
-Design login feature
-Prompts:
-- What inputs and validations are needed?
-- Write 3 lines of pseudo-code
-- Sketch a quick interface wireframe
-###You Do
-Tasks:
-1. Break down “Shopping Basket System” into modules
-2. Write pseudo-code for adding an item to basket
-3. Create a simple data dictionary for basket and item
-SEND: Provide pseudo-code template and flowchart symbols
-Stretch: Explain why normalised database design might be included
-###Check Your Work
-Answers:
-1. Modules: Add item, Remove item, Calculate total, Checkout, Save receipt
-2. Sample pseudo-code: INPUT itemName, APPEND to list, DISPLAY success
-3. Data dictionary with type and description
-Common error: Lack of validation steps and forgetting data types
-###Exam Question
-Explain two advantages of modular design for large NEA projects. (4 marks)
-###Improve Your Answer
-Model:
-Advantage 1: Easier maintenance – changes isolated to modules
-Advantage 2: Allows team development – modules built independently
-Explain why each clearly for marks
-###Exit Ticket
-Name one design tool and explain how it helps in NEA.
-###Final Check
-Possible answer: Pseudo-code helps clearly plan logic without syntax errors
-Recap: A strong NEA design includes modular planning, clear algorithms, data dictionary, UI layout
+// Room dimensions measured in tiles.
+// An 8x8 room means:
+// 8 tiles wide
+// 8 tiles tall
+const ROOM_SIZE = 8;
+
+// Convert room size from tiles into pixels.
+// 8 * 64 = 512 pixels.
+const ROOM_PIXELS = ROOM_SIZE * TILE_SIZE;
+
+class GameScene extends Phaser.Scene {
+
+    constructor() {
+        super();
+
+        // These track which room the player is currently in.
+        //
+        // (0,0) = starting room
+        // (1,0) = room east of start
+        // (-1,0) = room west of start
+        // (0,1) = room south of start
+        // etc.
+        this.roomX = 0;
+        this.roomY = 0;
+    }
+
+    create() {
+
+        // =====================================================
+        // INPUT SETUP
+        // =====================================================
+        //
+        // Phaser automatically creates cursor key objects.
+        // We'll use them for movement.
+        //
+        this.cursors = this.input.keyboard.createCursorKeys();
+
+        // =====================================================
+        // WALL STORAGE
+        // =====================================================
+        //
+        // StaticGroup is ideal because walls never move.
+        // Static bodies are cheaper than dynamic bodies.
+        //
+        this.wallGroup = this.physics.add.staticGroup();
+
+        // Build the first room.
+        this.drawRoom();
+
+        // =====================================================
+        // PLAYER CREATION
+        // =====================================================
+        //
+        // A simple green square.
+        //
+        this.player = this.add.rectangle(
+            ROOM_PIXELS / 2,
+            ROOM_PIXELS / 2,
+            30,
+            30,
+            0x00ff00
+        );
+
+        this.physics.add.existing(this.player);
+
+        // We WANT the player to be able to leave the room
+        // through door gaps, so disable world bounds.
+        this.player.body.setCollideWorldBounds(false);
+
+        // Enable collisions against walls.
+        this.physics.add.collider(
+            this.player,
+            this.wallGroup
+        );
+
+        this.roomText = this.add.text(
+            10,
+            10,
+            "Room: 0,0",
+            {
+                fontSize: "24px",
+                color: "#ffffff"
+            }
+        );
+    }
+
+    drawRoom() {
+
+        // =====================================================
+        // CLEAR OLD ROOM
+        // =====================================================
+        //
+        // Whenever we enter a new room, we remove the old walls.
+        //
+        this.wallGroup.clear(true, true);
+
+        // =====================================================
+        // DOOR POSITION
+        // =====================================================
+        //
+        // For an 8 tile room:
+        //
+        // tile indexes:
+        //
+        // 0 1 2 3 4 5 6 7
+        //
+        // gap = 4
+        //
+        // This means tile #4 becomes the doorway.
+        //
+        const gap = Math.floor(ROOM_SIZE / 2);
+
+        // =====================================================
+        // TOP + BOTTOM WALLS
+        // =====================================================
+        //
+        // We loop across the room width.
+        //
+        for (let x = 0; x < ROOM_SIZE; x++) {
+
+            // Skip the doorway position.
+            if (x !== gap) {
+
+                // Top wall tile
+                this.createWall(
+                    x * TILE_SIZE + TILE_SIZE / 2,
+                    TILE_SIZE / 2
+                );
+
+                // Bottom wall tile
+                this.createWall(
+                    x * TILE_SIZE + TILE_SIZE / 2,
+                    ROOM_PIXELS - TILE_SIZE / 2
+                );
+            }
+        }
+
+        // =====================================================
+        // LEFT + RIGHT WALLS
+        // =====================================================
+        //
+        // We start at 1 and end before ROOM_SIZE-1
+        // because the corners already exist.
+        //
+        for (let y = 1; y < ROOM_SIZE - 1; y++) {
+
+            if (y !== gap) {
+
+                // Left wall
+                this.createWall(
+                    TILE_SIZE / 2,
+                    y * TILE_SIZE + TILE_SIZE / 2
+                );
+
+                // Right wall
+                this.createWall(
+                    ROOM_PIXELS - TILE_SIZE / 2,
+                    y * TILE_SIZE + TILE_SIZE / 2
+                );
+            }
+        }
+    }
+
+    createWall(x, y) {
+
+        // =====================================================
+        // WALL CREATION
+        // =====================================================
+        //
+        // Visual rectangle.
+        //
+        const wall = this.add.rectangle(
+            x,
+            y,
+            TILE_SIZE,
+            TILE_SIZE,
+            0x666666
+        );
+
+        // Create a STATIC physics body.
+        // true = static body.
+        //
+        this.physics.add.existing(
+            wall,
+            true
+        );
+
+        this.wallGroup.add(wall);
+    }
+
+    moveToRoom(dx, dy) {
+
+        // =====================================================
+        // ROOM COORDINATE UPDATE
+        // =====================================================
+        //
+        // Example:
+        //
+        // Current room:
+        // (0,0)
+        //
+        // Move east:
+        // dx = 1
+        // dy = 0
+        //
+        // New room:
+        // (1,0)
+        //
+        this.roomX += dx;
+        this.roomY += dy;
+
+        // Generate walls for the new room.
+        this.drawRoom();
+
+        // =====================================================
+        // PLAYER REPOSITIONING
+        // =====================================================
+        //
+        // After entering a room,
+        // place player just inside the opposite doorway.
+        //
+        if (dx === 1) {
+            // Came from west side.
+            this.player.x = TILE_SIZE * 1.5;
+        }
+
+        if (dx === -1) {
+            // Came from east side.
+            this.player.x =
+                ROOM_PIXELS - TILE_SIZE * 1.5;
+        }
+
+        if (dy === 1) {
+            // Came from north side.
+            this.player.y = TILE_SIZE * 1.5;
+        }
+
+        if (dy === -1) {
+            // Came from south side.
+            this.player.y =
+                ROOM_PIXELS - TILE_SIZE * 1.5;
+        }
+
+        this.roomText.setText(
+            `Room: ${this.roomX},${this.roomY}`
+        );
+    }
+
+    update() {
+
+        const speed = 220;
+
+        // =====================================================
+        // RESET VELOCITY EACH FRAME
+        // =====================================================
+        //
+        // Prevents continued movement after key release.
+        //
+        this.player.body.setVelocity(0);
+
+        // =====================================================
+        // MOVEMENT
+        // =====================================================
+        //
+        if (this.cursors.left.isDown) {
+            this.player.body.setVelocityX(-speed);
+        }
+
+        if (this.cursors.right.isDown) {
+            this.player.body.setVelocityX(speed);
+        }
+
+        if (this.cursors.up.isDown) {
+            this.player.body.setVelocityY(-speed);
+        }
+
+        if (this.cursors.down.isDown) {
+            this.player.body.setVelocityY(speed);
+        }
+
+        // =====================================================
+        // ROOM TRANSITIONS
+        // =====================================================
+        //
+        // If player exits the visible room area,
+        // move into neighboring room.
+        //
+        // Example:
+        //
+        //     Room (0,0)
+        //
+        //         ^
+        //         |
+        // (-1,0) [ ] (1,0)
+        //         |
+        //         v
+        //
+        //       (0,1)
+        //
+        if (this.player.x < 0) {
+            this.moveToRoom(-1, 0);
+        }
+
+        if (this.player.x > ROOM_PIXELS) {
+            this.moveToRoom(1, 0);
+        }
+
+        if (this.player.y < 0) {
+            this.moveToRoom(0, -1);
+        }
+
+        if (this.player.y > ROOM_PIXELS) {
+            this.moveToRoom(0, 1);
+        }
+    }
+}
