@@ -1,13 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Phaser Room Demo</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        canvas {
+            border: 2px solid white;
+        }
+    </style>
+</head>
+<body>
+
+<script>
+
 const TILE_SIZE = 64;
-
-// Room dimensions measured in tiles.
-// An 8x8 room means:
-// 8 tiles wide
-// 8 tiles tall
 const ROOM_SIZE = 8;
-
-// Convert room size from tiles into pixels.
-// 8 * 64 = 512 pixels.
 const ROOM_PIXELS = ROOM_SIZE * TILE_SIZE;
 
 class GameScene extends Phaser.Scene {
@@ -15,46 +34,20 @@ class GameScene extends Phaser.Scene {
     constructor() {
         super();
 
-        // These track which room the player is currently in.
-        //
-        // (0,0) = starting room
-        // (1,0) = room east of start
-        // (-1,0) = room west of start
-        // (0,1) = room south of start
-        // etc.
         this.roomX = 0;
         this.roomY = 0;
     }
 
     create() {
 
-        // =====================================================
-        // INPUT SETUP
-        // =====================================================
-        //
-        // Phaser automatically creates cursor key objects.
-        // We'll use them for movement.
-        //
-        this.cursors = this.input.keyboard.createCursorKeys();
+        this.cursors =
+            this.input.keyboard.createCursorKeys();
 
-        // =====================================================
-        // WALL STORAGE
-        // =====================================================
-        //
-        // StaticGroup is ideal because walls never move.
-        // Static bodies are cheaper than dynamic bodies.
-        //
-        this.wallGroup = this.physics.add.staticGroup();
+        this.wallGroup =
+            this.physics.add.staticGroup();
 
-        // Build the first room.
         this.drawRoom();
 
-        // =====================================================
-        // PLAYER CREATION
-        // =====================================================
-        //
-        // A simple green square.
-        //
         this.player = this.add.rectangle(
             ROOM_PIXELS / 2,
             ROOM_PIXELS / 2,
@@ -65,11 +58,8 @@ class GameScene extends Phaser.Scene {
 
         this.physics.add.existing(this.player);
 
-        // We WANT the player to be able to leave the room
-        // through door gaps, so disable world bounds.
         this.player.body.setCollideWorldBounds(false);
 
-        // Enable collisions against walls.
         this.physics.add.collider(
             this.player,
             this.wallGroup
@@ -88,48 +78,19 @@ class GameScene extends Phaser.Scene {
 
     drawRoom() {
 
-        // =====================================================
-        // CLEAR OLD ROOM
-        // =====================================================
-        //
-        // Whenever we enter a new room, we remove the old walls.
-        //
         this.wallGroup.clear(true, true);
 
-        // =====================================================
-        // DOOR POSITION
-        // =====================================================
-        //
-        // For an 8 tile room:
-        //
-        // tile indexes:
-        //
-        // 0 1 2 3 4 5 6 7
-        //
-        // gap = 4
-        //
-        // This means tile #4 becomes the doorway.
-        //
         const gap = Math.floor(ROOM_SIZE / 2);
 
-        // =====================================================
-        // TOP + BOTTOM WALLS
-        // =====================================================
-        //
-        // We loop across the room width.
-        //
         for (let x = 0; x < ROOM_SIZE; x++) {
 
-            // Skip the doorway position.
             if (x !== gap) {
 
-                // Top wall tile
                 this.createWall(
                     x * TILE_SIZE + TILE_SIZE / 2,
                     TILE_SIZE / 2
                 );
 
-                // Bottom wall tile
                 this.createWall(
                     x * TILE_SIZE + TILE_SIZE / 2,
                     ROOM_PIXELS - TILE_SIZE / 2
@@ -137,24 +98,15 @@ class GameScene extends Phaser.Scene {
             }
         }
 
-        // =====================================================
-        // LEFT + RIGHT WALLS
-        // =====================================================
-        //
-        // We start at 1 and end before ROOM_SIZE-1
-        // because the corners already exist.
-        //
         for (let y = 1; y < ROOM_SIZE - 1; y++) {
 
             if (y !== gap) {
 
-                // Left wall
                 this.createWall(
                     TILE_SIZE / 2,
                     y * TILE_SIZE + TILE_SIZE / 2
                 );
 
-                // Right wall
                 this.createWall(
                     ROOM_PIXELS - TILE_SIZE / 2,
                     y * TILE_SIZE + TILE_SIZE / 2
@@ -165,12 +117,6 @@ class GameScene extends Phaser.Scene {
 
     createWall(x, y) {
 
-        // =====================================================
-        // WALL CREATION
-        // =====================================================
-        //
-        // Visual rectangle.
-        //
         const wall = this.add.rectangle(
             x,
             y,
@@ -179,9 +125,6 @@ class GameScene extends Phaser.Scene {
             0x666666
         );
 
-        // Create a STATIC physics body.
-        // true = static body.
-        //
         this.physics.add.existing(
             wall,
             true
@@ -192,56 +135,24 @@ class GameScene extends Phaser.Scene {
 
     moveToRoom(dx, dy) {
 
-        // =====================================================
-        // ROOM COORDINATE UPDATE
-        // =====================================================
-        //
-        // Example:
-        //
-        // Current room:
-        // (0,0)
-        //
-        // Move east:
-        // dx = 1
-        // dy = 0
-        //
-        // New room:
-        // (1,0)
-        //
         this.roomX += dx;
         this.roomY += dy;
 
-        // Generate walls for the new room.
         this.drawRoom();
 
-        // =====================================================
-        // PLAYER REPOSITIONING
-        // =====================================================
-        //
-        // After entering a room,
-        // place player just inside the opposite doorway.
-        //
-        if (dx === 1) {
-            // Came from west side.
+        if (dx === 1)
             this.player.x = TILE_SIZE * 1.5;
-        }
 
-        if (dx === -1) {
-            // Came from east side.
+        if (dx === -1)
             this.player.x =
                 ROOM_PIXELS - TILE_SIZE * 1.5;
-        }
 
-        if (dy === 1) {
-            // Came from north side.
+        if (dy === 1)
             this.player.y = TILE_SIZE * 1.5;
-        }
 
-        if (dy === -1) {
-            // Came from south side.
+        if (dy === -1)
             this.player.y =
                 ROOM_PIXELS - TILE_SIZE * 1.5;
-        }
 
         this.roomText.setText(
             `Room: ${this.roomX},${this.roomY}`
@@ -252,67 +163,53 @@ class GameScene extends Phaser.Scene {
 
         const speed = 220;
 
-        // =====================================================
-        // RESET VELOCITY EACH FRAME
-        // =====================================================
-        //
-        // Prevents continued movement after key release.
-        //
         this.player.body.setVelocity(0);
 
-        // =====================================================
-        // MOVEMENT
-        // =====================================================
-        //
-        if (this.cursors.left.isDown) {
+        if (this.cursors.left.isDown)
             this.player.body.setVelocityX(-speed);
-        }
 
-        if (this.cursors.right.isDown) {
+        if (this.cursors.right.isDown)
             this.player.body.setVelocityX(speed);
-        }
 
-        if (this.cursors.up.isDown) {
+        if (this.cursors.up.isDown)
             this.player.body.setVelocityY(-speed);
-        }
 
-        if (this.cursors.down.isDown) {
+        if (this.cursors.down.isDown)
             this.player.body.setVelocityY(speed);
-        }
 
-        // =====================================================
-        // ROOM TRANSITIONS
-        // =====================================================
-        //
-        // If player exits the visible room area,
-        // move into neighboring room.
-        //
-        // Example:
-        //
-        //     Room (0,0)
-        //
-        //         ^
-        //         |
-        // (-1,0) [ ] (1,0)
-        //         |
-        //         v
-        //
-        //       (0,1)
-        //
-        if (this.player.x < 0) {
+        if (this.player.x < 0)
             this.moveToRoom(-1, 0);
-        }
 
-        if (this.player.x > ROOM_PIXELS) {
+        if (this.player.x > ROOM_PIXELS)
             this.moveToRoom(1, 0);
-        }
 
-        if (this.player.y < 0) {
+        if (this.player.y < 0)
             this.moveToRoom(0, -1);
-        }
 
-        if (this.player.y > ROOM_PIXELS) {
+        if (this.player.y > ROOM_PIXELS)
             this.moveToRoom(0, 1);
-        }
     }
 }
+
+const config = {
+    type: Phaser.AUTO,
+    width: ROOM_PIXELS,
+    height: ROOM_PIXELS,
+    backgroundColor: "#202020",
+
+    physics: {
+        default: "arcade",
+        arcade: {
+            debug: false
+        }
+    },
+
+    scene: GameScene
+};
+
+new Phaser.Game(config);
+
+</script>
+
+</body>
+</html>
